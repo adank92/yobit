@@ -1,4 +1,4 @@
-require "yobit/version"
+require 'yobit/version'
 require 'openssl'
 require 'rest-client'
 require 'addressable/uri'
@@ -6,7 +6,7 @@ require 'addressable/uri'
 module Yobit
   PUBLIC_API_URL = 'https://yobit.net/api/3/'.freeze
   TRADE_API_URL  = 'https://yobit.net/tapi/'.freeze
-  
+
   class ApiConfig
     attr_accessor :key, :secret
 
@@ -35,19 +35,19 @@ module Yobit
   end
 
   def self.depth(pairs_list:, limit: 150)
-    limit = 2000 if (limit > 2000)
+    limit = 2000 if limit > 2000
     currencies = prepare_pairs(pairs_list)
     get('depth' + currencies, limit: limit)
   end
 
   def self.trades(pairs_list:, limit: 150)
-    limit = 2000 if (limit > 2000)
+    limit = 2000 if limit > 2000
     currencies = prepare_pairs(pairs_list)
     get('trades' + currencies, limit: limit)
   end
 
   def self.get_info
-    get('getInfo', client: trade_client)
+    post('getInfo', client: trade_client)
   end
 
   def self.trade(pair:, type:, rate:, amount:)
@@ -55,41 +55,39 @@ module Yobit
   end
 
   def self.active_orders(pair)
-    get('ActiveOrders', client: trade_client, pair: pair)
+    post('ActiveOrders', client: trade_client, pair: pair)
   end
 
   def self.order_info(order_id)
-    get('OrderInfo', client: trade_client, order_id: order_id)
+    post('OrderInfo', client: trade_client, order_id: order_id)
   end
 
   def self.cancel_order(order_id)
     post('CancelOrder', client: trade_client, order_id: order_id)
   end
 
-  def self.trade_history(from: 0, count: 1000, from_id: 0, end_id: 1000, order: "DESC", since: 0, end_time: Time.new(3000).to_i, pair:)
+  def self.trade_history(from: 0, count: 1000, from_id: 0, end_id: 1000, order: 'DESC', since: 0, end_time: Time.new(3000).to_i, pair:)
     post('TradeHistory', client: trade_client,
-         from:     from, 
-         count:    count, 
-         from_id:  from_id,
-         end_id:   end_id, 
-         order:    order, 
-         since:    since, 
-         end_time: end_time,
-         pair:     pair)
+                         from:     from,
+                         count:    count,
+                         from_id:  from_id,
+                         end_id:   end_id,
+                         order:    order,
+                         since:    since,
+                         end_time: end_time,
+                         pair:     pair)
   end
 
   def self.get_deposit_address(coin_name:, need_new: 0)
-    get('GetDepositAddress', client: trade_client, coinName: coin_name, need_new: need_new)
+    post('GetDepositAddress', client: trade_client, coinName: coin_name, need_new: need_new)
   end
 
   def self.withdraw_coins_to_address(coin_name:, amount:, address:)
     post('WithdrawCoinsToAddress', client: trade_client, coinName: coin_name, amount: amount, address: address)
   end
 
-  protected
-  
   def self.prepare_pairs(pairs_list)
-    pairs_list.join("-").prepend("/")
+    pairs_list.join('-').prepend('/')
   end
 
   def self.public_client
@@ -105,14 +103,13 @@ module Yobit
   end
 
   def self.post(method_name, client: public_client, **params)
-    params[:nonce] = (Time.now.to_f * 10000000).to_i
-    params[:sign]  = create_sign(params)
-    client[method_name].post(params, {key: config.key})
+    params[:nonce] = Time.now.to_i
+    params[:method] = method_name
+    client.post(params, 'Key' => config.key, 'Sign' => create_sign(params))
   end
-  
+
   def self.create_sign(data)
     encoded_data = Addressable::URI.form_encode(data)
     OpenSSL::HMAC.hexdigest('sha512', config.secret, encoded_data)
   end
-
 end
